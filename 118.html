@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="mn" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Химийн Элементийн Үелэх Систем — Periodic Table</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #060913;
+            background-image:
+                radial-gradient(circle at 14% 14%, rgba(56, 189, 248, 0.14), transparent 40%),
+                radial-gradient(circle at 86% 18%, rgba(168, 85, 247, 0.14), transparent 42%),
+                radial-gradient(circle at 50% 92%, rgba(16, 185, 129, 0.11), transparent 45%);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .element-tile {
+            transition: transform 0.14s ease, box-shadow 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+        }
+        .element-tile:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.04);
+            z-index: 15;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .no-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.25);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-sky-400 selection:text-slate-950">
+
+    <!-- Top Header -->
+    <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-30">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-400 via-indigo-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-lg shadow-lg shadow-sky-500/20 shrink-0">
+                    <i class="fa-solid fa-atom"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-black tracking-tight text-white">
+                        Химийн Элементийн Үелэх Систем
+                    </h1>
+                    <p class="text-xs text-slate-400">
+                        118 элементийг судалж, атом дугаар, масс, шинж чанар болон хэрэглээг нь харна уу
+                    </p>
+                </div>
+            </div>
+
+            <!-- Search & Quick Stats -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div class="relative min-w-[240px] sm:min-w-[280px]">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <input
+                        id="element-search-input"
+                        type="text"
+                        oninput="handleSearchInput(this.value)"
+                        placeholder="Нэр, тэмдэг эсвэл дугаар (1–118)..."
+                        class="w-full bg-slate-900 border border-slate-700/80 focus:border-sky-400 rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none transition"
+                    >
+                    <button
+                        type="button"
+                        id="clear-search-btn"
+                        onclick="clearSearch()"
+                        title="Хайлт цэвэрлэх"
+                        class="hidden text-slate-400 hover:text-white text-xs absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between sm:justify-start gap-2">
+                    <span class="text-slate-400">Харагдаж буй:</span>
+                    <span id="visible-elements-count" class="font-mono font-extrabold text-sky-400">118 / 118</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-[1440px] mx-auto w-full px-3 sm:px-6 py-5 sm:py-7 flex-grow space-y-6">
+
+        <!-- Category Filter Pills -->
+        <section class="bg-slate-900/75 border border-slate-800/90 rounded-2xl p-3.5 sm:p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-sky-400"></i>
+                    <span>Элементийн бүлэг / ангиллаар шүүх</span>
+                </span>
+                <button
+                    type="button"
+                    onclick="resetFilters()"
+                    class="text-xs font-bold text-sky-400 hover:text-sky-300 transition flex items-center gap-1"
+                >
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>Бүх элементийг харуулах</span>
+                </button>
+            </div>
+            <div id="category-filter-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <!-- Populated via JS -->
+            </div>
+        </section>
+
+        <!-- Main Workspace: Periodic Grid + Selected Element Inspector -->
+        <section class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+            <!-- Periodic Table Grid (8 cols on XL) -->
+            <div class="xl:col-span-8 bg-slate-900/75 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/90 pb-3">
+                    <div>
+                        <h2 class="text-sm sm:text-base font-extrabold text-white">18 Багана • 7 Үе (Лантаноид & Актиноидтой)</h2>
+                        <p class="text-xs text-slate-400">Дурын элемент дээр дарж дэлгэрэнгүй мэдээллийг баруун самбарт харна уу.</p>
+                    </div>
+                    <div id="active-filter-summary" class="text-xs font-semibold text-emerald-400">
+                        Бүх ангилал
+                    </div>
+                </div>
+
+                <!-- Scrollable 18-Column Periodic Grid -->
+                <div class="overflow-x-auto no-scrollbar pb-2">
+                    <div class="min-w-[780px] space-y-3">
+                        <!-- Main 18x7 grid -->
+                        <div id="periodic-main-grid" class="grid grid-cols-18 gap-1.5" style="grid-template-columns: repeat(18, minmax(0, 1fr));">
+                            <!-- Populated via JS -->
+                        </div>
+
+                        <!-- Lanthanides & Actinides rows -->
+                        <div class="pt-2 border-t border-slate-800/70 space-y-1.5">
+                            <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 px-1">
+                                <span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 font-bold">57–71</span>
+                                <span>Лантаноид (Lanthanides)</span>
+                            </div>
+                            <div id="lanthanide-grid" class="grid gap-1.5" style="grid-template-columns: repeat(15, minmax(0, 1fr));"></div>
+
+                            <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 px-1 pt-1">
+                                <span class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 font-bold">89–103</span>
+                                <span>Актиноид (Actinides)</span>
+                            </div>
+                            <div id="actinide-grid" class="grid gap-1.5" style="grid-template-columns: repeat(15, minmax(0, 1fr));"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Element Detail Inspector (4 cols on XL) -->
+            <aside id="element-inspector" class="xl:col-span-4 bg-slate-900/85 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5 xl:sticky xl:top-24">
+                <!-- Populated via JS -->
+            </aside>
+
+        </section>
+
+        <!-- Grade 6-9 Chemistry Lessons & Mini Quiz Section -->
+        <section id="grade-lessons-section" class="bg-slate-900/75 border border-slate-800/90 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/90 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 flex items-center justify-center text-slate-950 font-black text-lg shrink-0">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-xl font-black text-white">
+                            Химийн 6–9-р Ангийн Хичээл & Дасгал
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-400">
+                            Ангиа сонгож үндсэн сэдвүүд, жишээ урвал, химийн дүрэм болон шалгах асуултыг үзнэ үү
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Grade Selector Tabs (6, 7, 8, 9) -->
+                <div id="grade-tabs" class="grid grid-cols-4 gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 self-start md:self-auto">
+                    <button type="button" id="grade-tab-6" onclick="selectGrade(6)" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-sky-400 text-slate-950 transition">
+                        6-р анги
+                    </button>
+                    <button type="button" id="grade-tab-7" onclick="selectGrade(7)" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition">
+                        7-р анги
+                    </button>
+                    <button type="button" id="grade-tab-8" onclick="selectGrade(8)" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition">
+                        8-р анги
+                    </button>
+                    <button type="button" id="grade-tab-9" onclick="selectGrade(9)" class="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition">
+                        9-р анги
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Grade Content -->
+            <div id="grade-lesson-content" class="space-y-6">
+                <!-- Populated via JS -->
+            </div>
+        </section>
+
+        <!-- Memorization Trainer & Comprehensive Chemistry Test Section -->
+        <section id="memorize-and-test-section" class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+            <!-- Memorization Card Trainer (6 cols on XL) -->
+            <div class="xl:col-span-6 bg-slate-900/75 border border-slate-800/90 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/90 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-400 to-rose-500 flex items-center justify-center text-slate-950 font-black text-lg shrink-0">
+                            <i class="fa-solid fa-clone"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base sm:text-xl font-black text-white">
+                                Элемент Цээжлүүлэх Карт
+                            </h2>
+                            <p class="text-xs text-slate-400">
+                                Тэмдэг, дугаар, монгол нэр, хэрэглээг эргүүлж цээжлээрэй
+                            </p>
+                        </div>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono font-bold text-emerald-400 self-start sm:self-center">
+                        Цээжилсэн: <span id="memorized-elements-count">0</span> / 118
+                    </div>
+                </div>
+
+                <!-- Memorize Focus Filter -->
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <button type="button" id="mem-filter-all" onclick="setMemorizePool('all')" class="px-3 py-1.5 rounded-lg font-extrabold bg-amber-400 text-slate-950 transition">
+                            Бүх 118 элемент
+                        </button>
+                        <button type="button" id="mem-filter-core" onclick="setMemorizePool('core')" class="px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white transition">
+                            Түгээмэл 36 элемент
+                        </button>
+                    </div>
+                    <span id="mem-card-index-label" class="font-mono text-slate-400">Карт 1 / 118</span>
+                </div>
+
+                <!-- Interactive Memorization Card -->
+                <div id="memorize-card-box" class="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border border-slate-700/80 p-5 sm:p-7 min-h-[270px] flex flex-col justify-between gap-4 shadow-xl">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- Memorize Controls -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <button type="button" onclick="prevMemorizeCard()" class="px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Өмнөх</span>
+                    </button>
+                    <button type="button" onclick="toggleMemorizeReveal()" class="px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-xs font-extrabold text-sky-300 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-eye"></i>
+                        <span id="mem-reveal-btn-text">Хариу харах</span>
+                    </button>
+                    <button type="button" onclick="toggleCurrentMemorized()" id="mem-mark-btn" class="px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-check"></i>
+                        <span id="mem-mark-btn-text">Цээжилсэн</span>
+                    </button>
+                    <button type="button" onclick="nextMemorizeCard()" class="px-3.5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold transition flex items-center justify-center gap-1.5">
+                        <span>Дараагийн</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Interactive Chemistry Test (6 cols on XL) -->
+            <div class="xl:col-span-6 bg-slate-900/75 border border-slate-800/90 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/90 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-400 via-fuchsia-400 to-sky-400 flex items-center justify-center text-slate-950 font-black text-lg shrink-0">
+                            <i class="fa-solid fa-flask-vial"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base sm:text-xl font-black text-white">
+                                Химийн Шалгалт / Сорил Тест
+                            </h2>
+                            <p class="text-xs text-slate-400">
+                                Элементийн шинж чанар ба сурагчийн химийн сорил
+                            </p>
+                        </div>
+                    </div>
+                    <div class="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono font-bold text-sky-400 self-start sm:self-center">
+                        Оноо: <span id="main-test-score">0</span> / <span id="main-test-total">8</span>
+                    </div>
+                </div>
+
+                <!-- Test Mode Switcher -->
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <button type="button" id="test-mode-mixed" onclick="setMainTestMode('mixed')" class="px-3 py-1.5 rounded-lg font-extrabold bg-violet-400 text-slate-950 transition">
+                            Холимог Тест (8 асуулт)
+                        </button>
+                        <button type="button" id="test-mode-elements" onclick="setMainTestMode('elements')" class="px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white transition">
+                            Элементийн Сорил
+                        </button>
+                    </div>
+                    <button type="button" onclick="restartMainTest()" class="text-xs font-bold text-sky-400 hover:text-sky-300 transition flex items-center gap-1">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Шинэ тест</span>
+                    </button>
+                </div>
+
+                <!-- Test Question Area -->
+                <div id="main-test-stage" class="rounded-3xl bg-slate-950/90 border border-slate-800/90 p-5 sm:p-6 space-y-4">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/75 py-5 px-4 text-center text-xs text-slate-400 mt-8">
+        Химийн Элементийн Үелэх Систем • 118 элемент • Интерактив лавлах & шинжилгээний самбар
+    </footer>
+
+    <script>
+        /**
+         * Complete 118 Chemical Elements Dataset with Mongolian names,
+         * categories, atomic masses, electron configurations, physical states,
+         * and practical real-world uses.
+         */
+        const CATEGORY_META = {
+            "nonmetal": {
+                mn: "Металл биш",
+                badgeClass: "bg-sky-500/15 text-sky-300 border-sky-500/35",
+                tileClass: "bg-sky-950/75 border-sky-500/40 text-sky-100 hover:border-sky-300"
+            },
+            "noble-gas": {
+                mn: "Идэвхгүй хий",
+                badgeClass: "bg-violet-500/15 text-violet-300 border-violet-500/35",
+                tileClass: "bg-violet-950/75 border-violet-500/40 text-violet-100 hover:border-violet-300"
+            },
+            "alkali-metal": {
+                mn: "Шүлтлэг металл",
+                badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/35",
+                tileClass: "bg-rose-950/75 border-rose-500/40 text-rose-100 hover:border-rose-300"
+            },
+            "alkaline-earth": {
+                mn: "Шүлтлэг газар",
+                badgeClass: "bg-orange-500/15 text-orange-300 border-orange-500/35",
+                tileClass: "bg-orange-950/75 border-orange-500/40 text-orange-100 hover:border-orange-300"
+            },
+            "metalloid": {
+                mn: "Хагас металл",
+                badgeClass: "bg-teal-500/15 text-teal-300 border-teal-500/35",
+                tileClass: "bg-teal-950/75 border-teal-500/40 text-teal-100 hover:border-teal-300"
+            },
+            "post-transition": {
+                mn: "Шилжилтийн дараах металл",
+                badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/35",
+                tileClass: "bg-emerald-950/75 border-emerald-500/40 text-emerald-100 hover:border-emerald-300"
+            },
+            "transition-metal": {
+                mn: "Шилжилтийн металл",
+                badgeClass: "bg-indigo-500/15 text-indigo-300 border-indigo-500/35",
+                tileClass: "bg-indigo-950/70 border-indigo-500/35 text-indigo-100 hover:border-indigo-300"
+            },
+            "lanthanide": {
+                mn: "Лантаноид",
+                badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/35",
+                tileClass: "bg-amber-950/70 border-amber-500/35 text-amber-100 hover:border-amber-300"
+            },
+            "actinide": {
+                mn: "Актиноид",
+                badgeClass: "bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/35",
+                tileClass: "bg-fuchsia-950/70 border-fuchsia-500/35 text-fuchsia-100 hover:border-fuchsia-300"
+            }
+        };
+
+        // Raw tuple list for all 118 elements: [num, sym, en, mn, mass, cat, period, col, eConfig, phase, summary, uses]
+        const RAW_ELEMENTS = [
+            [1,"H","Hydrogen","Устөрөгч","1.008","nonmetal",1,1,"1s1","Хий","Орчлон ертөнцөд хамгийн элбэг байдаг хамгийн хөнгөн элемент.","Түлшний элемент, аммиак үйлдвэрлэл, цэвэр эрчим хүч"],
+            [2,"He","Helium","Гели","4.0026","noble-gas",1,18,"1s2","Хий","Маш бага буцлах цэгтэй, химийн хувьд тун идэвхгүй хий.","Агаарын бөмбөлөг, криоген хөргөлт, MRI төхөөрөмж"],
+            [3,"Li","Lithium","Лити","6.94","alkali-metal",2,1,"[He] 2s1","Хатуу","Хамгийн хөнгөн металл бөгөөд өндөр цахилгаан химийн идэвхтэй.","Цэнэглэдэг зай хураагуур (EV, утас), эм зүй, шил керамик"],
+            [4,"Be","Beryllium","Берилли","9.0122","alkaline-earth",2,2,"[He] 2s2","Хатуу","Хөнгөн атлаа хатуу, дулаан сайн дамжуулдаг металл.","Сансрын хөлгийн эд анги, рентген цонх, тусгай хайлш"],
+            [5,"B","Boron","Бор","10.81","metalloid",2,13,"[He] 2s2 2p1","Хатуу","Хатуулаг өндөртэй хагас металл.","Халуунд тэсвэртэй шил, хөдөө аж ахуйн бордоо, соронзон"],
+            [6,"C","Carbon","Нүүрстөрөгч","12.011","nonmetal",2,14,"[He] 2s2 2p2","Хатуу","Амьд организмын үндэс; бал чулуу, алмааз, графен хэлбэртэй.","Ган хайлш, полимер материал, шүүлтүүр ба электрод"],
+            [7,"N","Nitrogen","Азот","14.007","nonmetal",2,15,"[He] 2s2 2p3","Хий","Дэлхийн агаар мандлын ~78%-ийг бүрдүүлэгч өнгөгүй хий.","Бордоо, хүнсний савлагаа хадгалалт, шингэн хөргөлт"],
+            [8,"O","Oxygen","Хүчилтөрөгч","15.999","nonmetal",2,16,"[He] 2s2 2p4","Хий","Амьсгал болон шаталтын урвалд зайлшгүй шаардлагатай хий.","Эмнэлгийн хүчилтөрөгч, металл хайлуулах, ус цэвэршүүлэлт"],
+            [9,"F","Fluorine","Фтор","18.998","nonmetal",2,17,"[He] 2s2 2p5","Хий","Хамгийн өндөр цахилгаан сөрөг чанартай идэвхтэй элемент.","Шүдний оо, хөргөлтийн бодис, тусгай бүрхүүл"],
+            [10,"Ne","Neon","Неон","20.180","noble-gas",2,18,"[He] 2s2 2p6","Хий","Цахилгаан цэнэглэлтэд улаан-улбар шар гэрэл цацруулдаг хий.","Гэрлэн зар сурталчилгаа, вакуум хоолой, лазер"],
+            [11,"Na","Sodium","Натри","22.990","alkali-metal",3,1,"[Ne] 3s1","Хатуу","Зөөлөн, урвалд идэвхтэй шүлтлэг металл.","Хоолны давс (NaCl), саван үйлдвэрлэл, гудамжны гэрэл"],
+            [12,"Mg","Magnesium","Магни","24.305","alkaline-earth",3,2,"[Ne] 3s2","Хатуу","Маш хөнгөн бүтцийн металл ба хлорофиллын чухал хэсэг.","Хөнгөн хайлш, автомашин ба нисэх онгоц, хүнсний нэмэлт"],
+            [13,"Al","Aluminum","Хөнгөн цагаан","26.982","post-transition",3,13,"[Ne] 3s2 3p1","Хатуу","Зэврэлтэд тэсвэртэй, хөнгөн, уян хатан металл.","Лааз ба сав баглаа боодол, тээврийн хэрэгсэл, барилга"],
+            [14,"Si","Silicon","Цахиур","28.085","metalloid",3,14,"[Ne] 3s2 3p2","Хатуу","Орчин үеийн электроникийн суурь хагас дамжуулагч.","Компьютерийн чип, нарны зай, силикон ба шил"],
+            [15,"P","Phosphorus","Фосфор","30.974","nonmetal",3,15,"[Ne] 3s2 3p3","Хатуу","ДНХ ба эсийн эрчим хүчний (ATP) чухал элемент.","Бордоо, шүдэнз, химийн нийлэгжилт"],
+            [16,"S","Sulfur","Хүхэр","32.06","nonmetal",3,16,"[Ne] 3s2 3p4","Хатуу","Шар өнгөтэй металл биш элемент.","Хүхрийн хүчил, резин боловсруулалт, эм бэлдмэл"],
+            [17,"Cl","Chlorine","Хлор","35.45","nonmetal",3,17,"[Ne] 3s2 3p5","Хий","Ариутгах шинж чанартай галоген элемент.","Ундны ус ариутгал, PVC хуванцар, ахуйн цэвэрлэгч"],
+            [18,"Ar","Argon","Аргон","39.948","noble-gas",3,18,"[Ne] 3s2 3p6","Хий","Агаар мандалд гуравдугаарт орох идэвхгүй хий.","Гагнуурын хамгаалалт, дулаалгатай цонх, гэрэлтүүлэг"],
+            [19,"K","Potassium","Кали","39.098","alkali-metal",4,1,"[Ar] 4s1","Хатуу","Ургамлын өсөлт болон мэдрэлийн дохионд чухал металл.","Хөдөө аж ахуйн бордоо, электролит, тусгай шил"],
+            [20,"Ca","Calcium","Кальци","40.078","alkaline-earth",4,2,"[Ar] 4s2","Хатуу","Яс, шүд болон шохойн чулууны үндсэн бүрэлдэхүүн.","Цемент ба барилга, хүнс/эрүүл мэнд, ган цэвэршүүлэлт"],
+            [21,"Sc","Scandium","Сканди","44.956","transition-metal",4,3,"[Ar] 3d1 4s2","Хатуу","Хөнгөн цагааныг бэхжүүлдэг ховор шилжилтийн металл.","Спортын тоног төхөөрөмж, сансрын хайлш, гэрэлтүүлэг"],
+            [22,"Ti","Titanium","Титан","47.867","transition-metal",4,4,"[Ar] 3d2 4s2","Хатуу","Бат бөх, хөнгөн, зэврэлт болон халуунд тэсвэртэй металл.","Эмнэлгийн суулгац, нисэх онгоцны бүтэц, спортын хэрэгсэл"],
+            [23,"V","Vanadium","Ванади","50.942","transition-metal",4,5,"[Ar] 3d3 4s2","Хатуу","Ганыг илүү бат бөх, элэгдэлд тэсвэртэй болгодог металл.","Багаж хэрэгслийн ган, урсгалын зай хураагуур, катализатор"],
+            [24,"Cr","Chromium","Хром","51.996","transition-metal",4,6,"[Ar] 3d5 4s1","Хатуу","Гялалзсан, зэврэлтээс хамгаалдаг хатуу металл.","Зэвэрдэггүй ган, хром бүрээс, өнгөт пигмент"],
+            [25,"Mn","Manganese","Манган","54.938","transition-metal",4,7,"[Ar] 3d5 4s2","Хатуу","Ган үйлдвэрлэлд хүчилтөрөгч ба хүхрийг холбоход чухал.","Ган хайлш, хуурай зай, хөдөө аж ахуй"],
+            [26,"Fe","Iron","Төмөр","55.845","transition-metal",4,8,"[Ar] 3d6 4s2","Хатуу","Хамгийн өргөн хэрэглэгддэг металл; цусанд гемоглобин бүрдүүлнэ.","Барилга ба машин үйлдвэрлэл, ган, соронз"],
+            [27,"Co","Cobalt","Кобальт","58.933","transition-metal",4,9,"[Ar] 3d7 4s2","Хатуу","Өндөр температурт бат бөх хайлш ба зайнд ашиглагддаг металл.","Зай хураагуурын катод, тийрэлтэт хөдөлгүүр, цэнхэр пигмент"],
+            [28,"Ni","Nickel","Никель","58.693","transition-metal",4,10,"[Ar] 3d8 4s2","Хатуу","Зэврэлтэд тэсвэртэй, соронзон шинж чанартай металл.","Зэвэрдэггүй ган, цэнэглэдэг зай, зоос ба хайлш"],
+            [29,"Cu","Copper","Зэс","63.546","transition-metal",4,11,"[Ar] 3d10 4s1","Хатуу","Цахилгаан болон дулааныг маш сайн дамжуулдаг улаавтар металл.","Цахилгааны утас, мотор ба трансформатор, хоолой"],
+            [30,"Zn","Zinc","Цайр","65.38","transition-metal",4,12,"[Ar] 3d10 4s2","Хатуу","Төмрийг зэврэлтээс хамгаалахад өргөн хэрэглэгддэг металл.","Цайрдсан төмөр, зай, гууль хайлш ба арьс арчилгаа"],
+            [31,"Ga","Gallium","Галли","69.723","post-transition",4,13,"[Ar] 3d10 4s2 4p1","Хатуу","Гарын дулаанд ч хайлж болох бага хайлах цэгтэй металл.","LED диод, хагас дамжуулагч, нарны эс"],
+            [32,"Ge","Germanium","Германи","72.630","metalloid",4,14,"[Ar] 3d10 4s2 4p2","Хатуу","Хэт улаан туяаны оптик болон хагас дамжуулагчид хэрэглэгдэнэ.","Шилэн кабель, дулааны камер, электроник"],
+            [33,"As","Arsenic","Хүнцэл","74.922","metalloid",4,15,"[Ar] 3d10 4s2 4p3","Хатуу","Тусгай хагас дамжуулагч ба хайлшид ашиглагддаг хагас металл.","Галлиум арсенид чип, тусгай шил, хайлш"],
+            [34,"Se","Selenium","Селен","78.971","nonmetal",4,16,"[Ar] 3d10 4s2 4p4","Хатуу","Гэрлийн нөлөөгөөр цахилгаан дамжуулалт нь өөрчлөгддөг элемент.","Шил үйлдвэрлэл, нарны зай, электроникийн эд анги"],
+            [35,"Br","Bromine","Бром","79.904","nonmetal",4,17,"[Ar] 3d10 4s2 4p5","Шингэн","Тасалгааны температурт шингэн байдаг цорын ганц металл биш элемент.","Гал тэсвэрлэх материал, шүүлтүүр, химийн урвалж"],
+            [36,"Kr","Krypton","Криптон","83.798","noble-gas",4,18,"[Ar] 3d10 4s2 4p6","Хий","Өндөр эрчимтэй гэрэлтүүлэг болон тусгай цонхонд хэрэглэгддэг хий.","Гэрэлтүүлэг, гэрэл зураг, дулаан тусгаарлах шил"],
+            [37,"Rb","Rubidium","Рубиди","85.468","alkali-metal",5,1,"[Kr] 5s1","Хатуу","Маш идэвхтэй зөөлөн шүлтлэг металл.","Атомын цаг, судалгааны лазер, тусгай шил"],
+            [38,"Sr","Strontium","Стронци","87.62","alkaline-earth",5,2,"[Kr] 5s2","Хатуу","Галд улаан өнгө өгдөг шүлтлэг газар металл.","Салют ба дохионы гэрэл, соронзон феррит, эмнэлэг"],
+            [39,"Y","Yttrium","Иттри","88.906","transition-metal",5,3,"[Kr] 4d1 5s2","Хатуу","Лазер болон дэлгэцийн люминофорт хэрэглэгддэг металл.","LED/дэлгэцийн люминофор, лазер, керамик"],
+            [40,"Zr","Zirconium","Циркони","91.224","transition-metal",5,4,"[Kr] 4d2 5s2","Хатуу","Зэврэлт болон дулаанд маш тэсвэртэй металл.","Цөмийн реакторын бүрхүүл, хиймэл шүд/үе, зуухны материал"],
+            [41,"Nb","Niobium","Ниоби","92.906","transition-metal",5,5,"[Kr] 4d4 5s1","Хатуу","Хэт дамжуулагч хайлш болон тусгай ганд нэмэгддэг металл.","Хэт дамжуулагч соронз, сансрын хөдөлгүүр, тусгай ган"],
+            [42,"Mo","Molybdenum","Молибден","95.95","transition-metal",5,6,"[Kr] 4d5 5s1","Хатуу","Маш өндөр хайлах цэгтэй, өндөр бат бэх шилжилтийн металл.","Өндөр бат бэх ган, тосолгооны нэмэлт, электроник"],
+            [43,"Tc","Technetium","Технеци","[98]","transition-metal",5,7,"[Kr] 4d5 5s2","Хатуу","Байгальд маш ховор, голдуу цөмийн урвалаар үүсдэг цацраг идэвхт металл.","Эмнэлгийн дүрс оношилгоо (SPECT), зэврэлт судалгаа"],
+            [44,"Ru","Ruthenium","Рутени","101.07","transition-metal",5,8,"[Kr] 4d7 5s1","Хатуу","Химийн урвалыг хурдасгадаг платины бүлгийн металл.","Катализатор, цахилгаан контактын бүрхүүл, чип үйлдвэрлэл"],
+            [45,"Rh","Rhodium","Родий","102.91","transition-metal",5,9,"[Kr] 4d8 5s1","Хатуу","Өндөр ойлтын чадвартай, ховор үнэт металл.","Автомашины утаа шүүгч катализатор, гоёл чимэглэл, толь"],
+            [46,"Pd","Palladium","Паллади","106.42","transition-metal",5,10,"[Kr] 4d10","Хатуу","Устөрөгчийг шингээх чадвартай үнэт металл.","Каталитик хувиргагч, электроник, шүдний хайлш"],
+            [47,"Ag","Silver","Мөнгө","107.87","transition-metal",5,11,"[Kr] 4d10 5s1","Хатуу","Бүх элементээс хамгийн өндөр цахилгаан ба дулаан дамжуулалттай.","Нарны зай, электроник, үнэт эдлэл ба нян устгах бүрхүүл"],
+            [48,"Cd","Cadmium","Кадми","112.41","transition-metal",5,12,"[Kr] 4d10 5s2","Хатуу","Зөөлөн цэнэглэгч металл; аюулгүй ажиллагаа шаардана.","Тусгай зай, пигмент, нарны зайн давхарга"],
+            [49,"In","Indium","Инди","114.82","post-transition",5,13,"[Kr] 4d10 5s2 5p1","Хатуу","Тунгалаг цахилгаан дамжуулагч бүрхүүлд чухал зөөлөн металл.","Мэдрэгч дэлгэц (ITO бүрхүүл), микроэлектроник"],
+            [50,"Sn","Tin","Цагаан тугалга","118.71","post-transition",5,14,"[Kr] 4d10 5s2 5p2","Хатуу","Хүнсний сав болон гагнуурын хайлшид хэрэглэгддэг металл.","Электроникийн гагнуур, хүнсний лааз, хүрэл хайлш"],
+            [51,"Sb","Antimony","Сурьма","121.76","metalloid",5,15,"[Kr] 4d10 5s2 5p3","Хатуу","Гал тэсвэрлэх нэгдэл ба тусгай хайлшид ордог хагас металл.","Гал сааруулагч материал, зайны хайлш, хагас дамжуулагч"],
+            [52,"Te","Tellurium","Теллур","127.60","metalloid",5,16,"[Kr] 4d10 5s2 5p4","Хатуу","Нарны зай болон термоэлектрик материалд ашиглагддаг хагас металл.","Нарны хавтан (CdTe), термоэлектрик төхөөрөмж, хайлш"],
+            [53,"I","Iodine","Иод","126.90","nonmetal",5,17,"[Kr] 4d10 5s2 5p5","Хатуу","Бамбай булчирхайн үйл ажиллагаа болон ариутгалд чухал галоген.","Иоджуулсан давс, шар иод ариутгагч, эмнэлгийн тодосгогч"],
+            [54,"Xe","Xenon","Ксенон","131.29","noble-gas",5,18,"[Kr] 4d10 5s2 5p6","Хий","Хүнд идэвхгүй хий бөгөөд тод цагаан гэрэл үүсгэдэг.","Автомашины гэрэл, сансрын ион хөдөлгүүр, эмнэлгийн гэрэлтүүлэг"],
+            [55,"Cs","Cesium","Цезий","132.91","alkali-metal",6,1,"[Xe] 6s1","Хатуу","Маш өндөр нарийвчлалтай цаг хэмжихэд ашиглагддаг металл.","Атомын стандарт цаг, геофизик хэмжилт, тусгай шил"],
+            [56,"Ba","Barium","Бари","137.33","alkaline-earth",6,2,"[Xe] 6s2","Хатуу","Рентген шинжилгээ ба өрөмдлөгийн шингэнд хэрэглэгддэг металл.","Ходоод гэдэсний рентген шинжилгээ, өрөмдлөгийн уусмал, пиротехник"],
+            [57,"La","Lanthanum","Лантан","138.91","lanthanide",6,3,"[Xe] 5d1 6s2","Хатуу","Лантаноидын эхний элемент; оптик шил ба зайнд хэрэглэгдэнэ.","Камерын линз, гибрид зай, катализатор"],
+            [58,"Ce","Cerium","Цери","140.12","lanthanide",6,4,"[Xe] 4f1 5d1 6s2","Хатуу","Өнгөлгөөний нунтаг болон катализаторт түгээмэл газрын ховор элемент.","Шил өнгөлөгч, катализатор, асаагуурын цахиур чулуу"],
+            [59,"Pr","Praseodymium","Празеодим","140.91","lanthanide",6,5,"[Xe] 4f3 6s2","Хатуу","Нисэх онгоцны хайлш, шилний шүүлтүүр ба соронзонд ордог.","Гагнуурын хамгаалалт шил, соронзон хайлш, гэрэлтүүлэг"],
+            [60,"Nd","Neodymium","Неодим","144.24","lanthanide",6,6,"[Xe] 4f4 6s2","Хатуу","Маш хүчтэй байнгын соронз бүтээхэд голлон ашиглагддаг.","Салхин турбин ба мотор (NdFeB соронз), лазер, чихэвч"],
+            [61,"Pm","Promethium","Промети","[145]","lanthanide",6,7,"[Xe] 4f5 6s2","Хатуу","Байгальд тун ховор, цацраг идэвхт лантаноид.","Тусгай гэрэлтүүлэг, судалгааны зай"],
+            [62,"Sm","Samarium","Самари","150.36","lanthanide",6,8,"[Xe] 4f6 6s2","Хатуу","Өндөр температурт соронзон шинжээ хадгалдаг соронз хийдэг.","Өндөр хэмийн соронз, цөмийн хяналт, оптик"],
+            [63,"Eu","Europium","Европи","151.96","lanthanide",6,9,"[Xe] 4f7 6s2","Хатуу","Улаан ба ногоон флуоресцент гэрэл үүсгэхэд чухал элемент.","Дэлгэц ба гэрэлтүүлэг, мөнгөн тэмдэгтийн хамгаалалт"],
+            [64,"Gd","Gadolinium","Гадолини","157.25","lanthanide",6,10,"[Xe] 4f7 5d1 6s2","Хатуу","Соронзон резонансын дүрслэлд тодосгогч болгон ашиглагддаг.","MRI тодосгогч бодис, соронзон хөргөлт, нейтрон хамгаалалт"],
+            [65,"Tb","Terbium","Терби","158.93","lanthanide",6,11,"[Xe] 4f9 6s2","Хатуу","Ногоон гэрэл цацруулагч ба соронзон материалд ордог.","Дэлгэц/гэрэлтүүлэг, соронзон мэдрэгч, тусгай хайлш"],
+            [66,"Dy","Dysprosium","Диспрози","162.50","lanthanide",6,12,"[Xe] 4f10 6s2","Хатуу","Өндөр хүчин чадалтай соронз болон лазерт хэрэглэгддэг.","Цахилгаан машины соронз, салхин турбин, цөмийн технологи"],
+            [67,"Ho","Holmium","Гольми","164.93","lanthanide",6,13,"[Xe] 4f11 6s2","Хатуу","Хамгийн хүчтэй соронзон шинжтэй элементүүдийн нэг.","Эмнэлгийн лазер, соронзон туйл, оптик тоног төхөөрөмж"],
+            [68,"Er","Erbium","Эрби","167.26","lanthanide",6,14,"[Xe] 4f12 6s2","Хатуу","Шилэн кабелийн дохио өсгөгчид өргөн ашиглагддаг.","Шилэн кабелийн өсгөгч, лазер, тусгай шил"],
+            [69,"Tm","Thulium","Тули","168.93","lanthanide",6,15,"[Xe] 4f13 6s2","Хатуу","Зөөврийн рентген үүсгүүр ба лазерт ашиглагддаг ховор элемент.","Зөөврийн рентген төхөөрөмж, лазер, судалгаа"],
+            [70,"Yb","Ytterbium","Иттерби","173.05","lanthanide",6,16,"[Xe] 4f14 6s2","Хатуу","Нарийн цаг хэмжилт ба лазерт чухал лантаноид.","Оптик цаг, лазер, стресс мэдрэгч хайлш"],
+            [71,"Lu","Lutetium","Лютеци","174.97","lanthanide",6,17,"[Xe] 4f14 5d1 6s2","Хатуу","Лантаноидын сүүлийн элемент; нягт ихтэй, хатуу металл.","PET сканнер детектор, химийн катализатор"],
+            [72,"Hf","Hafnium","Гафни","178.49","transition-metal",6,4,"[Xe] 4f14 5d2 6s2","Хатуу","Нейтрон шингээх чадвар сайтай, халуунд тэсвэртэй металл.","Микропроцессорын тусгаарлагч давхарга, цөмийн реактор"],
+            [73,"Ta","Tantalum","Тантал","180.95","transition-metal",6,5,"[Xe] 4f14 5d3 6s2","Хатуу","Зэврэлтэд маш тэсвэртэй, өндөр багтаамжит конденсаторын металл.","Ухаалаг утасны конденсатор, мэс заслын багаж, хайлш"],
+            [74,"W","Tungsten","Вольфрам","183.84","transition-metal",6,6,"[Xe] 4f14 5d4 6s2","Хатуу","Бүх металл дотроос хамгийн өндөр хайлах цэгтэй (~3422°C).","Зүсэх багаж/карбид, рентген анод, өндөр хэмийн утас"],
+            [75,"Re","Rhenium","Рени","186.21","transition-metal",6,7,"[Xe] 4f14 5d5 6s2","Хатуу","Тийрэлтэт хөдөлгүүрийн супер хайлшид ордог ховор металл.","Онгоцны хөдөлгүүрийн турбин, нефть боловсруулах катализатор"],
+            [76,"Os","Osmium","Осми","190.23","transition-metal",6,8,"[Xe] 4f14 5d6 6s2","Хатуу","Байгальд хамгийн өндөр нягттай металлуудын нэг.","Тусгай цахилгаан контакт, элэгдэлд тэсвэртэй үзүүр"],
+            [77,"Ir","Iridium","Ириди","192.22","transition-metal",6,9,"[Xe] 4f14 5d7 6s2","Хатуу","Хэт өндөр температурт ч зэвэрдэггүй хатуу үнэт металл.","Очлуур (spark plug), хэт халуун тэсвэрлэх сав, стандартууд"],
+            [78,"Pt","Platinum","Платинум","195.08","transition-metal",6,10,"[Xe] 4f14 5d9 6s1","Хатуу","Химийн тогтвортой, үнэт катализатор ба гоёл чимэглэлийн металл.","Катализатор, лабораторийн сав, үнэт эдлэл"],
+            [79,"Au","Gold","Алт","196.97","transition-metal",6,11,"[Xe] 4f14 5d10 6s1","Хатуу","Зэвэрдэггүй, өндөр цахилгаан дамжуулалттай үнэт металл.","Электроникийн холбоос, санхүүгийн нөөц, үнэт эдлэл"],
+            [80,"Hg","Mercury","Мөнгөн ус","200.59","transition-metal",6,12,"[Xe] 4f14 5d10 6s2","Шингэн","Тасалгааны температурт шингэн байдаг металл; аюулгүй хадгална.","Шинжилгээний багаж, тусгай гэрэлтүүлэг, уурхайн хими"],
+            [81,"Tl","Thallium","Талли","204.38","post-transition",6,13,"[Xe] 4f14 5d10 6s2 6p1","Хатуу","Зөөлөн металл; тусгай оптик болон электроникийн нэгдэлд ордог.","Хэт улаан туяаны оптик, цацраг илрүүлэгч, судалгаа"],
+            [82,"Pb","Lead","Хар тугалга","207.2","post-transition",6,14,"[Xe] 4f14 5d10 6s2 6p2","Хатуу","Нягт ихтэй, зөөлөн металл; цацрагийн хамгаалалтад ашиглагддаг.","Хүчил-хар тугалгын зай, цацраг тусгаарлагч"],
+            [83,"Bi","Bismuth","Висмут","208.98","post-transition",6,15,"[Xe] 4f14 5d10 6s2 6p3","Хатуу","Харьцангуй хоргүй хүнд металл; хайлш ба эмэнд хэрэглэгдэнэ.","Ходоодны эм бэлдмэл, бага хайлах цэгтэй хайлш, пигмент"],
+            [84,"Po","Polonium","Полони","[209]","post-transition",6,16,"[Xe] 4f14 5d10 6s2 6p4","Хатуу","Маш өндөр цацраг идэвхт чанартай ховор металл.","Цацрагийн судалгаа, антистатик төхөөрөмж"],
+            [85,"At","Astatine","Астат","[210]","metalloid",6,17,"[Xe] 4f14 5d10 6s2 6p5","Хатуу","Байгальд хамгийн ховор байдаг цацраг идэвхт элемент.","Хорт хавдрын зорилтот эмчилгээний судалгаа"],
+            [86,"Rn","Radon","Радон","[222]","noble-gas",6,18,"[Xe] 4f14 5d10 6s2 6p6","Хий","Байгалийн цацраг идэвхт идэвхгүй хий.","Барилгын агааржуулалтын хяналт, геологийн судалгаа"],
+            [87,"Fr","Francium","Франци","[223]","alkali-metal",7,1,"[Rn] 7s1","Хатуу","Хэт богино хагас задралын үетэй цацраг идэвхт шүлтлэг металл.","Шинжлэх ухааны суурь судалгаа"],
+            [88,"Ra","Radium","Ради","[226]","alkaline-earth",7,2,"[Rn] 7s2","Хатуу","Цацраг идэвхт шүлтлэг газар металл.","Цөмийн судалгаа, цацрагийн лавлах эх үүсвэр"],
+            [89,"Ac","Actinium","Актини","[227]","actinide",7,3,"[Rn] 6d1 7s2","Хатуу","Актиноидын бүлгийг эхлүүлдэг цацраг идэвхт металл.","Цөмийн анагаах ухааны судалгаа, нейтроны эх үүсвэр"],
+            [90,"Th","Thorium","Тори","232.04","actinide",7,4,"[Rn] 6d2 7s2","Хатуу","Цөмийн эрчим хүчний боломжит түлш болох цацраг идэвхт металл.","Цөмийн эрчим хүчний судалгаа, өндөр хэмийн оптик"],
+            [91,"Pa","Protactinium","Протактини","231.04","actinide",7,5,"[Rn] 5f2 6d1 7s2","Хатуу","Ховор, цацраг идэвхт актиноид металл.","Цөмийн физикийн судалгаа"],
+            [92,"U","Uranium","Уран","238.03","actinide",7,6,"[Rn] 5f3 6d1 7s2","Хатуу","Цөмийн реакторын үндсэн түлш болдог хүнд цацраг идэвхт металл.","Цөмийн цахилгаан станц, изотопын судалгаа"],
+            [93,"Np","Neptunium","Нептуни","[237]","actinide",7,7,"[Rn] 5f4 6d1 7s2","Хатуу","Ураны дараах синтетик цацраг идэвхт металл.","Нейтрон илрүүлэгч, цөмийн судалгаа"],
+            [94,"Pu","Plutonium","Плутони","[244]","actinide",7,8,"[Rn] 5f6 7s2","Хатуу","Цөмийн эрчим хүч болон сансрын зарим генераторт ашиглагддаг.","Сансрын хөлгийн дулааны батарей (RTG), цөмийн реактор"],
+            [95,"Am","Americium","Америци","[243]","actinide",7,9,"[Rn] 5f7 7s2","Хатуу","Утаа мэдрэгч болон хэмжилтийн төхөөрөмжид хэрэглэгддэг.","Ионжуулагч утаа мэдрэгч, үйлдвэрийн хэмжилт"],
+            [96,"Cm","Curium","Кюри","[247]","actinide",7,10,"[Rn] 5f7 6d1 7s2","Хатуу","Цацраг идэвхт трансураны элемент; сансрын спектрометрт ордог.","Марс/сансрын судалгааны рентген спектрометр"],
+            [97,"Bk","Berkelium","Беркли","[247]","actinide",7,11,"[Rn] 5f9 7s2","Хатуу","Лабораторид нийлэгжүүлдэг цацраг идэвхт актиноид.","Хүнд элементүүдийн судалгаа"],
+            [98,"Cf","Californium","Калифорни","[251]","actinide",7,12,"[Rn] 5f10 7s2","Хатуу","Хүчтэй нейтрон ялгаруулдаг цацраг идэвхт элемент.","Реактор асаалт, материалын шинжилгээ"],
+            [99,"Es","Einsteinium","Эйнштени","[252]","actinide",7,13,"[Rn] 5f11 7s2","Хатуу","Цөмийн физикийн туршилтад гарган авдаг синтетик элемент.","Цөмийн урвалын судалгаа"],
+            [100,"Fm","Fermium","Ферми","[257]","actinide",7,14,"[Rn] 5f12 7s2","Хатуу","Синтетик хүнд актиноид элемент.","Суурь физикийн судалгаа"],
+            [101,"Md","Mendelevium","Менделеви","[258]","actinide",7,15,"[Rn] 5f13 7s2","Хатуу","Д.И.Менделеевийн нэрээр нэрлэгдсэн синтетик элемент.","Цөмийн химийн судалгаа"],
+            [102,"No","Nobelium","Нобели","[259]","actinide",7,16,"[Rn] 5f14 7s2","Хатуу","А.Нобелийн нэрээр нэрлэгдсэн синтетик актиноид.","Судалгааны лаборатори"],
+            [103,"Lr","Lawrencium","Лоуренси","[266]","actinide",7,17,"[Rn] 5f14 7s2 7p1","Хатуу","Актиноидын эгнээг төгсгөгч синтетик элемент.","Хүнд элементийн химийн шинж чанарын судалгаа"],
+            [104,"Rf","Rutherfordium","Резерфорди","[267]","transition-metal",7,4,"[Rn] 5f14 6d2 7s2","Хатуу","Э.Резерфордын нэрээр нэрлэгдсэн супер хүнд шилжилтийн металл.","Супер хүнд элементийн судалгаа"],
+            [105,"Db","Dubnium","Дубни","[268]","transition-metal",7,5,"[Rn] 5f14 6d3 7s2","Хатуу","Богино хугацаанд тогтох синтетик шилжилтийн металл.","Цөмийн физикийн судалгаа"],
+            [106,"Sg","Seaborgium","Сиборги","[269]","transition-metal",7,6,"[Rn] 5f14 6d4 7s2","Хатуу","Г.Сиборгийн нэрээр нэрлэгдсэн синтетик элемент.","Химийн шинж чанарын судалгаа"],
+            [107,"Bh","Bohrium","Бори","[270]","transition-metal",7,7,"[Rn] 5f14 6d5 7s2","Хатуу","Н.Борын нэрээр нэрлэгдсэн синтетик шилжилтийн металл.","Цөмийн туршилт"],
+            [108,"Hs","Hassium","Хасси","[277]","transition-metal",7,8,"[Rn] 5f14 6d6 7s2","Хатуу","Супер хүнд шилжилтийн металл элемент.","Физик химийн судалгаа"],
+            [109,"Mt","Meitnerium","Мейтнери","[278]","transition-metal",7,9,"[Rn] 5f14 6d7 7s2","Хатуу","Л.Мейтнерийн нэрээр нэрлэгдсэн синтетик элемент.","Цөмийн судалгаа"],
+            [110,"Ds","Darmstadtium","Дармштадти","[281]","transition-metal",7,10,"[Rn] 5f14 6d8 7s2","Хатуу","Синтетик супер хүнд элемент.","Супер хүнд цөмийн судалгаа"],
+            [111,"Rg","Roentgenium","Рентгени","[282]","transition-metal",7,11,"[Rn] 5f14 6d9 7s2","Хатуу","В.Рентгений нэрээр нэрлэгдсэн супер хүнд металл.","Физикийн судалгаа"],
+            [112,"Cn","Copernicium","Коперници","[285]","transition-metal",7,12,"[Rn] 5f14 6d10 7s2","Хий/Төлөв тодорхойгүй","Н.Коперникийн нэрээр нэрлэгдсэн хүнд элемент.","Цөмийн химийн судалгаа"],
+            [113,"Nh","Nihonium","Нихони","[286]","post-transition",7,13,"[Rn] 5f14 6d10 7s2 7p1","Хатуу/Төлөв тодорхойгүй","Японд анх гарган авсан супер хүнд элемент.","Судалгааны туршилт"],
+            [114,"Fl","Flerovium","Флерови","[289]","post-transition",7,14,"[Rn] 5f14 6d10 7s2 7p2","Хатуу/Төлөв тодорхойгүй","Г.Флеровын нэрээр нэрлэгдсэн хүнд элемент.","Супер хүнд элементийн судалгаа"],
+            [115,"Mc","Moscovium","Москови","[290]","post-transition",7,15,"[Rn] 5f14 6d10 7s2 7p3","Хатуу/Төлөв тодорхойгүй","Синтетик супер хүнд элемент.","Цөмийн физикийн судалгаа"],
+            [116,"Lv","Livermorium","Ливермори","[293]","post-transition",7,16,"[Rn] 5f14 6d10 7s2 7p4","Хатуу/Төлөв тодорхойгүй","Синтетик супер хүнд элемент.","Цөмийн туршилт"],
+            [117,"Ts","Tennessine","Теннесси","[294]","metalloid",7,17,"[Rn] 5f14 6d10 7s2 7p5","Хатуу/Төлөв тодорхойгүй","Хүнд галоген/хагас металлын шинжтэй синтетик элемент.","Супер хүнд элементийн судалгаа"],
+            [118,"Og","Oganesson","Оганессон","[294]","noble-gas",7,18,"[Rn] 5f14 6d10 7s2 7p6","Хий/Төлөв тодорхойгүй","Ю.Оганессианы нэрээр нэрлэгдсэн үелэх системийн 118-р элемент.","Цөмийн бүтцийн судалгаа"]
+        ];
+
+        const ELEMENTS = RAW_ELEMENTS.map(row => ({
+            number: row[0],
+            symbol: row[1],
+            nameEn: row[2],
+            nameMn: row[3],
+            mass: row[4],
+            category: row[5],
+            period: row[6],
+            col: row[7],
+            eConfig: row[8],
+            phase: row[9],
+            summary: row[10],
+            uses: row[11]
+        }));
+
+        const appState = {
+            selectedNumber: 26, // Default highlight: Iron (Fe)
+            category: "all",
+            search: "",
+            selectedGrade: 6,
+            gradeQuizIndex: 0,
+            gradeQuizAnswered: false,
+            memorizePool: "all",
+            memorizeIndex: 0,
+            memorizeRevealed: false,
+            memorizedIds: [],
+            testMode: "mixed",
+            testQuestions: [],
+            testCurrentIdx: 0,
+            testScore: 0,
+            testAnswered: false
+        };
+
+        /**
+         * Grade 6 to 9 Chemistry curriculum content with core topics,
+         * clear Mongolian explanations, key formulas/examples, and practice quiz items.
+         */
+        const GRADE_LESSONS = {
+            6: {
+                title: "6-р Ангийн Хими — Бодис, Түүний Төлөв & Холимог",
+                subtitle: "Ахуйн болон байгалийн бодисын шинж чанар, агрегат төлөв, ялгах аргууд",
+                topics: [
+                    {
+                        tag: "Сэдэв 6.1",
+                        title: "Бодис ба биет, бодисын шинж чанар",
+                        summary: "Бодисоос тогтох тодорхой хэлбэр, хэмжээтэй зүйлийг биет гэнэ (жишээ нь: ус — бодис, мөсөн шоо — биет). Бодисыг өнгө, үнэр, төлөв, нягт, уусах чанар зэрэг шинжээр танина.",
+                        example: "Жишээ: Ус (H₂O) нь өнгөгүй, үнэргүй шингэн бөгөөд 0°C-д хөлдөж мөс, 100°C-д буцалж уур болно."
+                    },
+                    {
+                        tag: "Сэдэв 6.2",
+                        title: "Хатуу, шингэн, хийн төлөв ба шилжилт",
+                        summary: "Бөөмсийн хөдөлгөөн ба хоорондын зайнаас хамаарч бодис хатуу, шингэн, хий төлөвт оршдог. Халаахад бөөмсийн хөдөлгөөн эрчимжиж, хөргөхөд удааширна.",
+                        example: "Хайлах ↔ Хөлдөх • Уурших ↔ Конденсацлах • Сублимацлах"
+                    },
+                    {
+                        tag: "Сэдэв 6.3",
+                        title: "Цэвэр бодис ба холимог ялгах арга",
+                        summary: "Нэг төрлийн бөөмсөөс тогтох бодисыг цэвэр бодис, хоёр ба түүнээс олон бодисын нийлэмжийг холимог гэнэ. Элс-усны холимогт шүүх, давс-усны уусмалд ууршуулах арга хэрэглэнэ.",
+                        example: "Шүүлтүүрээр уусдаггүй хатууг ялгах • Ууршуулах замаар ууссан давсыг гарган авах"
+                    }
+                ],
+                quiz: {
+                    question: "Давс болон усны уусмалаас цэвэр давсыг ялган авах хамгийн тохиромжтой арга аль нь вэ?",
+                    options: [
+                        "Усыг зөөлөн ууршуулах",
+                        "Соронзоор татах",
+                        "Тунадасжуулаад дээд шингэнийг юүлэх",
+                        "Хөргөөд царцаах"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Усанд ууссан давсыг шүүлтүүрээр барьж авч чадахгүй тул усыг ууршуулахад ёроолд нь давсны талст үлдэнэ."
+                }
+            },
+            7: {
+                title: "7-р Ангийн Хими — Атом, Элемент, Физик ба Химийн Үзэгдэл",
+                subtitle: "Атомын бүтэц, химийн элемент ба тэмдэг, урвалын шинж тэмдэг",
+                topics: [
+                    {
+                        tag: "Сэдэв 7.1",
+                        title: "Атом ба химийн элемент",
+                        summary: "Атом нь эерэг цэнэгтэй протон (p⁺), цэнэггүй нейтрон (n⁰)-оос тогтох цөм болон түүнийг тойрон эргэх сөрөг цэнэгтэй электрон (e⁻)-оос бүрдэнэ. Протоны тоо нь атом дугаартай тэнцүү.",
+                        example: "Нүүрстөрөгч (C, #6): 6 протон, 6 электрон • Хүчилтөрөгч (O, #8): 8 протон, 8 электрон"
+                    },
+                    {
+                        tag: "Сэдэв 7.2",
+                        title: "Физик ба химийн үзэгдэл",
+                        summary: "Физик үзэгдлийн үед шинэ бодис үүсэхгүй, зөвхөн хэлбэр эсвэл төлөв өөрчлөгдөнө. Химийн урвалын үед анхны бодисууд хувирч шинэ шинж чанартай шинэ бодис үүснэ.",
+                        example: "Физик: Цас хайлах, цаас урах • Хими: Төмөр зэврэх, мод шатах, хүнс исэх"
+                    },
+                    {
+                        tag: "Сэдэв 7.3",
+                        title: "Химийн тэмдэг ба энгийн нэгдэл",
+                        summary: "Элемент бүрд олон улсын 1 эсвэл 2 үсгэн тэмдэг оноогддог (H, O, N, Fe, Cu). Хоёр ба түүнээс олон элемент химийн холбоогоор нэгдэхэд нийлмэл бодис буюу нэгдэл үүснэ.",
+                        example: "2H₂ + O₂ → 2H₂O (Устөрөгч + Хүчилтөрөгч → Ус)"
+                    }
+                ],
+                quiz: {
+                    question: "Аль нь химийн үзэгдлийн (химийн урвалын) жишээ вэ?",
+                    options: [
+                        "Мөс хайлж ус болох",
+                        "Төмөр агаар, чийгийн нөлөөгөөр зэврэх",
+                        "Давс усанд уусах",
+                        "Шилэн аяга хагарах"
+                    ],
+                    correctIndex: 1,
+                    explanation: "Төмөр зэврэхэд төмрийн исэл хэмээх шинэ бодис үүсдэг тул химийн үзэгдэл юм."
+                }
+            },
+            8: {
+                title: "8-р Ангийн Хими — Үелэх Систем, Химийн Холбоо & Исэл",
+                subtitle: "Үе ба бүлгийн зүй тогтол, ионы ба ковалентын холбоо, исэл ба хүчил/суурь",
+                topics: [
+                    {
+                        tag: "Сэдэв 8.1",
+                        title: "Үелэх системийн үе ба бүлэг",
+                        summary: "Хэвтээ эгнээг Үе (электрон давхрааны тоотой холбоотой), босоо баганыг Бүлэг гэнэ. 1-р бүлгийн шүлтлэг металлууд идэвхтэй, 18-р бүлгийн идэвхгүй хий тогтвортой гадаад давхраатай.",
+                        example: "3-р үе: Na, Mg, Al, Si, P, S, Cl, Ar • 1-р бүлэг: Li, Na, K"
+                    },
+                    {
+                        tag: "Сэдэв 8.2",
+                        title: "Ионы болон ковалентын холбоо",
+                        summary: "Металл ба металл бишийн хооронд электрон шилжсэнээр эсрэг цэнэгт ионууд үүсэж ионы холбоо тогтоно. Металл бишүүдийн хооронд электрон хос дундаа эзэмшихэд ковалентын холбоо үүснэ.",
+                        example: "Ионы холбоо: NaCl (Натрийн хлорид) • Ковалентын холбоо: H₂O, CO₂, CH₄"
+                    },
+                    {
+                        tag: "Сэдэв 8.3",
+                        title: "Исэл ба түүний ангилал",
+                        summary: "Элемент хүчилтөрөгчтэй нэгдсэн хоёр элементийн нэгдлийг исэл гэнэ. Металлын ислүүд ихэвчлэн суурьлаг, металл бишийн ислүүд хүчиллэг шинжтэй байдаг.",
+                        example: "Суурьлаг исэл: CaO, MgO, CuO • Хүчиллэг исэл: CO₂, SO₂"
+                    }
+                ],
+                quiz: {
+                    question: "NaCl (хоолны давс) нэгдлийн дотор ямар төрлийн химийн холбоо зонхилон үүсдэг вэ?",
+                    options: [
+                        "Ионы холбоо",
+                        "Устөрөгчийн холбоо",
+                        "Металлын холбоо",
+                        "Дан туйлгүй ковалентын холбоо"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Натри (Na — металл) электроноо алдаж Na⁺, хлор (Cl — металл биш) авч Cl⁻ болсноор ионы холбоо үүснэ."
+                }
+            },
+            9: {
+                title: "9-р Ангийн Хими — Моль, Стехиометр, Хүчил-Суурь & Исэлдэлт-Ангижрал",
+                subtitle: "Бодисын тоо хэмжээ (моль), массын хадгалагдах хууль, саармагжих урвал",
+                topics: [
+                    {
+                        tag: "Сэдэв 9.1",
+                        title: "Моль ба молийн масс (n = m / M)",
+                        summary: "1 моль бодис нь Авогадрын тоо буюу 6.02 × 10²³ бүтцийн нэгж (атом, молекул, ион) агуулна. Бодисын тоо хэмжээг n = m / M томьёогоор олно.",
+                        example: "M(H₂O) = 2×1 + 16 = 18 г/моль • 36 г ус = 2 моль ус"
+                    },
+                    {
+                        tag: "Сэдэв 9.2",
+                        title: "Хүчил, суурь, давс ба саармагжих урвал",
+                        summary: "Хүчил нь усан уусмалд H⁺ ион, шүлт нь OH⁻ ион үүсгэдэг. Хүчил ба суурь харилцан үйлчилж давс ба ус үүсгэхийг саармагжих урвал гэнэ.",
+                        example: "HCl + NaOH → NaCl + H₂O (Давсны хүчил + Натрийн гидроксид → Давс + Ус)"
+                    },
+                    {
+                        tag: "Сэдэв 9.3",
+                        title: "Исэлдэлт ба ангижрал (Редокс урвал)",
+                        summary: "Исэлдэх процесст атом/ион электрон алдаж исэлдэлтийн зэрэг нь өснө; ангижрах процесст электрон авч исэлдэлтийн зэрэг нь буурна.",
+                        example: "Zn + CuSO₄ → ZnSO₄ + Cu (Цайр исэлдэж Zn²⁺ болно, зэс ангижирч Cu болно)"
+                    }
+                ],
+                quiz: {
+                    question: "Нүүрстөрөгчийн давхар ислийн (CO₂) молийн масс (M) хэд вэ? (C = 12, O = 16)",
+                    options: [
+                        "28 г/моль",
+                        "44 г/моль",
+                        "32 г/моль",
+                        "16 г/моль"
+                    ],
+                    correctIndex: 1,
+                    explanation: "M(CO₂) = 12 + 2 × 16 = 12 + 32 = 44 г/моль байна."
+                }
+            }
+        };
+
+        function selectGrade(grade) {
+            appState.selectedGrade = grade;
+            appState.gradeQuizIndex = 0;
+            appState.gradeQuizAnswered = false;
+
+            [6, 7, 8, 9].forEach(g => {
+                const tab = document.getElementById(`grade-tab-${g}`);
+                if (!tab) return;
+                if (g === grade) {
+                    tab.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-sky-400 text-slate-950 transition";
+                } else {
+                    tab.className = "px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition";
+                }
+            });
+
+            renderGradeLesson();
+        }
+
+        function renderGradeLesson() {
+            const container = document.getElementById("grade-lesson-content");
+            if (!container) return;
+
+            const lesson = GRADE_LESSONS[appState.selectedGrade] || GRADE_LESSONS[6];
+            const quiz = lesson.quiz;
+
+            container.innerHTML = `
+                <div class="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-slate-800/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold text-white">${lesson.title}</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-0.5">${lesson.subtitle}</p>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 self-start sm:self-center shrink-0">
+                        ${appState.selectedGrade}-р анги
+                    </span>
+                </div>
+
+                <!-- 3 Topic Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    ${lesson.topics.map(t => `
+                        <article class="p-4 sm:p-5 rounded-2xl bg-slate-950/75 border border-slate-800 flex flex-col justify-between gap-3">
+                            <div class="space-y-2">
+                                <span class="inline-block px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/25">
+                                    ${t.tag}
+                                </span>
+                                <h4 class="text-sm sm:text-base font-extrabold text-white leading-snug">
+                                    ${t.title}
+                                </h4>
+                                <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                                    ${t.summary}
+                                </p>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-900 border border-slate-800/90 text-xs font-mono text-amber-200">
+                                ${t.example}
+                            </div>
+                        </article>
+                    `).join("")}
+                </div>
+
+                <!-- Mini Practice Question for Selected Grade -->
+                <div class="p-4 sm:p-6 rounded-2xl bg-slate-950/90 border border-sky-500/25 space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span>${appState.selectedGrade}-р ангийн сорил асуулт</span>
+                        </span>
+                        <span class="text-[11px] text-slate-400">Мэдлэгээ шалгаарай</span>
+                    </div>
+
+                    <p class="text-sm sm:text-base font-bold text-white">
+                        ${quiz.question}
+                    </p>
+
+                    <div id="grade-quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        ${quiz.options.map((opt, idx) => `
+                            <button
+                                type="button"
+                                onclick="checkGradeQuiz(${idx}, this)"
+                                class="grade-quiz-btn text-left p-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-semibold text-slate-200 transition"
+                            >
+                                <span class="font-mono text-sky-400 mr-2">${String.fromCharCode(65 + idx)}.</span>
+                                <span>${opt}</span>
+                            </button>
+                        `).join("")}
+                    </div>
+
+                    <div id="grade-quiz-feedback" class="hidden p-3.5 rounded-xl text-xs sm:text-sm font-medium"></div>
+                </div>
+            `;
+        }
+
+        function checkGradeQuiz(choiceIndex, btnEl) {
+            const lesson = GRADE_LESSONS[appState.selectedGrade] || GRADE_LESSONS[6];
+            const quiz = lesson.quiz;
+            const buttons = document.querySelectorAll(".grade-quiz-btn");
+            buttons.forEach(b => (b.disabled = true));
+
+            const feedback = document.getElementById("grade-quiz-feedback");
+            if (!feedback) return;
+            feedback.classList.remove("hidden");
+
+            if (choiceIndex === quiz.correctIndex) {
+                btnEl.className = "grade-quiz-btn text-left p-3.5 rounded-xl bg-emerald-500/20 border-2 border-emerald-400 text-xs sm:text-sm font-bold text-emerald-300";
+                feedback.className = "p-3.5 rounded-xl text-xs sm:text-sm font-medium bg-emerald-500/15 border border-emerald-500/35 text-emerald-300";
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> Зөв хариуллаа! ${quiz.explanation}`;
+            } else {
+                btnEl.className = "grade-quiz-btn text-left p-3.5 rounded-xl bg-rose-500/20 border-2 border-rose-400 text-xs sm:text-sm font-bold text-rose-300";
+                if (buttons[quiz.correctIndex]) {
+                    buttons[quiz.correctIndex].className = "grade-quiz-btn text-left p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-400/60 text-xs sm:text-sm font-bold text-emerald-300";
+                }
+                feedback.className = "p-3.5 rounded-xl text-xs sm:text-sm font-medium bg-rose-500/15 border border-rose-500/35 text-rose-200";
+                feedback.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1.5"></i> Буруу байна. ${quiz.explanation}`;
+            }
+        }
+
+        /**
+         * Memorization Trainer logic: allows users to flip/reveal element details,
+         * mark elements as memorized (persisted in localStorage), and cycle through cards.
+         */
+        const MEMORIZE_STORAGE_KEY = "periodic_memorized_elements_v1";
+
+        function loadMemorizedElements() {
+            try {
+                const raw = localStorage.getItem(MEMORIZE_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                appState.memorizedIds = Array.isArray(parsed) ? parsed.map(Number) : [];
+            } catch (err) {
+                console.warn("Could not load memorized elements:", err);
+                appState.memorizedIds = [];
+            }
+        }
+
+        function saveMemorizedElements() {
+            try {
+                localStorage.setItem(MEMORIZE_STORAGE_KEY, JSON.stringify(appState.memorizedIds));
+            } catch (err) {
+                console.warn("Could not save memorized elements:", err);
+            }
+        }
+
+        function getMemorizeList() {
+            if (appState.memorizePool === "core") {
+                return ELEMENTS.filter(el => el.number <= 36);
+            }
+            return ELEMENTS;
+        }
+
+        function setMemorizePool(pool) {
+            appState.memorizePool = pool;
+            appState.memorizeIndex = 0;
+            appState.memorizeRevealed = false;
+
+            const allBtn = document.getElementById("mem-filter-all");
+            const coreBtn = document.getElementById("mem-filter-core");
+            if (allBtn && coreBtn) {
+                allBtn.className = pool === "all"
+                    ? "px-3 py-1.5 rounded-lg font-extrabold bg-amber-400 text-slate-950 transition"
+                    : "px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white transition";
+                coreBtn.className = pool === "core"
+                    ? "px-3 py-1.5 rounded-lg font-extrabold bg-amber-400 text-slate-950 transition"
+                    : "px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white transition";
+            }
+            renderMemorizeCard();
+        }
+
+        function toggleMemorizeReveal() {
+            appState.memorizeRevealed = !appState.memorizeRevealed;
+            renderMemorizeCard();
+        }
+
+        function nextMemorizeCard() {
+            const list = getMemorizeList();
+            appState.memorizeIndex = (appState.memorizeIndex + 1) % list.length;
+            appState.memorizeRevealed = false;
+            renderMemorizeCard();
+        }
+
+        function prevMemorizeCard() {
+            const list = getMemorizeList();
+            appState.memorizeIndex = (appState.memorizeIndex - 1 + list.length) % list.length;
+            appState.memorizeRevealed = false;
+            renderMemorizeCard();
+        }
+
+        function toggleCurrentMemorized() {
+            const list = getMemorizeList();
+            const item = list[appState.memorizeIndex];
+            if (!item) return;
+
+            const idx = appState.memorizedIds.indexOf(item.number);
+            if (idx > -1) {
+                appState.memorizedIds.splice(idx, 1);
+            } else {
+                appState.memorizedIds.push(item.number);
+            }
+            saveMemorizedElements();
+            renderMemorizeCard();
+        }
+
+        function renderMemorizeCard() {
+            const list = getMemorizeList();
+            if (!list.length) return;
+            if (appState.memorizeIndex >= list.length) appState.memorizeIndex = 0;
+
+            const el = list[appState.memorizeIndex];
+            const catMeta = CATEGORY_META[el.category] || { mn: el.category, badgeClass: "bg-slate-800 text-slate-300" };
+            const isMem = appState.memorizedIds.includes(el.number);
+
+            const countEl = document.getElementById("memorized-elements-count");
+            if (countEl) countEl.textContent = String(appState.memorizedIds.length);
+
+            const idxLabel = document.getElementById("mem-card-index-label");
+            if (idxLabel) idxLabel.textContent = `Карт ${appState.memorizeIndex + 1} / ${list.length}`;
+
+            const revealBtnText = document.getElementById("mem-reveal-btn-text");
+            if (revealBtnText) revealBtnText.textContent = appState.memorizeRevealed ? "Нуух" : "Хариу харах";
+
+            const markBtnText = document.getElementById("mem-mark-btn-text");
+            const markBtn = document.getElementById("mem-mark-btn");
+            if (markBtnText) markBtnText.textContent = isMem ? "Цээжилсэн ✓" : "Цээжилсэн";
+            if (markBtn) {
+                markBtn.className = isMem
+                    ? "px-3.5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400 text-emerald-300 text-xs font-extrabold transition flex items-center justify-center gap-1.5"
+                    : "px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold transition flex items-center justify-center gap-1.5";
+            }
+
+            const cardBox = document.getElementById("memorize-card-box");
+            if (!cardBox) return;
+
+            cardBox.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-sky-400">
+                        #${el.number} • Атом масс: ${el.mass}
+                    </span>
+                    <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border ${catMeta.badgeClass}">
+                        ${catMeta.mn}
+                    </span>
+                </div>
+
+                <div class="text-center py-3 space-y-1">
+                    <div class="font-mono text-4xl sm:text-5xl font-black text-white tracking-tight">
+                        ${el.symbol}
+                    </div>
+                    <div class="text-xs text-slate-400">${el.nameEn} • ${el.eConfig}</div>
+                </div>
+
+                ${appState.memorizeRevealed ? `
+                    <div class="rounded-2xl bg-slate-900/95 border border-sky-500/30 p-4 space-y-2 text-left">
+                        <div class="flex items-center justify-between">
+                            <span class="text-base sm:text-lg font-black text-emerald-300">${el.nameMn}</span>
+                            <span class="text-xs font-mono text-slate-400">${el.phase}</span>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">${el.summary}</p>
+                        <p class="text-xs text-amber-200/90"><strong class="text-amber-300">Хэрэглээ:</strong> ${el.uses}</p>
+                    </div>
+                ` : `
+                    <button type="button" onclick="toggleMemorizeReveal()" class="w-full py-4 rounded-2xl bg-slate-900/80 hover:bg-slate-800/80 border border-dashed border-slate-700 text-xs sm:text-sm font-bold text-slate-300 transition">
+                        Монгол нэр, тайлбар болон хэрэглээг харахын тулд дарна уу
+                    </button>
+                `}
+            `;
+        }
+
+        /**
+         * Interactive Chemistry Quiz generator combining element identification,
+         * periodic properties, and Grade 6-9 curriculum questions.
+         */
+        function buildTestQuestions(mode) {
+            const questions = [];
+            const shuffledElements = [...ELEMENTS].sort(() => Math.random() - 0.5);
+
+            // Generate 5 dynamic element questions
+            for (let i = 0; i < 5; i++) {
+                const target = shuffledElements[i];
+                const distractors = ELEMENTS
+                    .filter(e => e.number !== target.number)
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, 3);
+
+                if (i % 2 === 0) {
+                    const choices = [target, ...distractors].sort(() => Math.random() - 0.5);
+                    questions.push({
+                        tag: `Элемент #${target.number}`,
+                        prompt: `"${target.symbol}" химийн тэмдэгтэй элемент аль нь вэ?`,
+                        options: choices.map(c => `${c.nameMn} (${c.nameEn})`),
+                        correctIndex: choices.findIndex(c => c.number === target.number),
+                        explanation: `"${target.symbol}" нь ${target.number}-р элемент буюу ${target.nameMn} (${target.nameEn}) юм.`
+                    });
+                } else {
+                    const choices = [target, ...distractors].sort(() => Math.random() - 0.5);
+                    questions.push({
+                        tag: CATEGORY_META[target.category]?.mn || "Элемент",
+                        prompt: `Атом дугаар нь ${target.number} бөгөөд "${target.uses.split(",")[0]}"-д өргөн ашиглагддаг элемент аль нь вэ?`,
+                        options: choices.map(c => `${c.nameMn} (${c.symbol})`),
+                        correctIndex: choices.findIndex(c => c.number === target.number),
+                        explanation: `${target.number}-р элемент бол ${target.nameMn} (${target.symbol}) бөгөөд хэрэглээ: ${target.uses}.`
+                    });
+                }
+            }
+
+            if (mode === "mixed") {
+                const curriculumPool = [6, 7, 8, 9]
+                    .map(g => ({ grade: g, ...GRADE_LESSONS[g].quiz }))
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, 3);
+
+                curriculumPool.forEach(item => {
+                    questions.push({
+                        tag: `${item.grade}-р ангийн хими`,
+                        prompt: item.question,
+                        options: item.options,
+                        correctIndex: item.correctIndex,
+                        explanation: item.explanation
+                    });
+                });
+            } else {
+                const extraEl = shuffledElements.slice(5, 8);
+                extraEl.forEach(target => {
+                    const distractors = ELEMENTS
+                        .filter(e => e.number !== target.number)
+                        .sort(() => Math.random() - 0.5)
+                        .slice(0, 3);
+                    const choices = [target, ...distractors].sort(() => Math.random() - 0.5);
+                    questions.push({
+                        tag: `Үе ${target.period}`,
+                        prompt: `"${target.nameMn}" элементийн химийн тэмдэг болон атом дугаар аль нь вэ?`,
+                        options: choices.map(c => `${c.symbol} (#${c.number})`),
+                        correctIndex: choices.findIndex(c => c.number === target.number),
+                        explanation: `${target.nameMn} элементийн тэмдэг нь ${target.symbol}, атом дугаар нь ${target.number}.`
+                    });
+                });
+            }
+
+            return questions;
+        }
+
+        function setMainTestMode(mode) {
+            appState.testMode = mode;
+            const mixedBtn = document.getElementById("test-mode-mixed");
+            const elBtn = document.getElementById("test-mode-elements");
+            if (mixedBtn && elBtn) {
+                mixedBtn.className = mode === "mixed"
+                    ? "px-3 py-1.5 rounded-lg font-extrabold bg-violet-400 text-slate-950 transition"
+                    : "px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white transition";
+                elBtn.className = mode === "elements"
+                    ? "px-3 py-1.5 rounded-lg font-extrabold bg-violet-400 text-slate-950 transition"
+                    : "px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white transition";
+            }
+            restartMainTest();
+        }
+
+        function restartMainTest() {
+            appState.testQuestions = buildTestQuestions(appState.testMode);
+            appState.testCurrentIdx = 0;
+            appState.testScore = 0;
+            appState.testAnswered = false;
+            renderMainTest();
+        }
+
+        function renderMainTest() {
+            const stage = document.getElementById("main-test-stage");
+            if (!stage) return;
+
+            if (!appState.testQuestions.length) {
+                appState.testQuestions = buildTestQuestions(appState.testMode);
+            }
+
+            const total = appState.testQuestions.length;
+            const scoreEl = document.getElementById("main-test-score");
+            const totalEl = document.getElementById("main-test-total");
+            if (scoreEl) scoreEl.textContent = String(appState.testScore);
+            if (totalEl) totalEl.textContent = String(total);
+
+            if (appState.testCurrentIdx >= total) {
+                const pct = Math.round((appState.testScore / total) * 100);
+                stage.innerHTML = `
+                    <div class="text-center py-6 space-y-4">
+                        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/35 text-emerald-300 text-2xl">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="text-xl sm:text-2xl font-black text-white">Сорил Тест Дууслаа!</h3>
+                            <p class="text-sm text-slate-300">
+                                Таны оноо: <span class="font-mono font-extrabold text-emerald-400">${appState.testScore} / ${total}</span> (${pct}%)
+                            </p>
+                        </div>
+                        <button type="button" onclick="restartMainTest()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-400 to-emerald-400 text-slate-950 text-xs sm:text-sm font-black transition">
+                            Дахин шалгах
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            const q = appState.testQuestions[appState.testCurrentIdx];
+            appState.testAnswered = false;
+
+            stage.innerHTML = `
+                <div class="flex items-center justify-between gap-2 text-xs">
+                    <span class="px-2.5 py-1 rounded-lg font-mono font-bold bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                        ${q.tag}
+                    </span>
+                    <span class="font-mono text-slate-400">
+                        Асуулт ${appState.testCurrentIdx + 1} / ${total}
+                    </span>
+                </div>
+
+                <p class="text-sm sm:text-base font-extrabold text-white leading-snug">
+                    ${q.prompt}
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    ${q.options.map((opt, idx) => `
+                        <button
+                            type="button"
+                            onclick="answerMainTest(${idx}, this)"
+                            class="main-test-opt text-left p-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-semibold text-slate-200 transition"
+                        >
+                            <span class="font-mono text-violet-300 mr-2">${String.fromCharCode(65 + idx)}.</span>
+                            <span>${opt}</span>
+                        </button>
+                    `).join("")}
+                </div>
+
+                <div id="main-test-feedback" class="hidden p-3.5 rounded-xl text-xs sm:text-sm font-medium"></div>
+
+                <div class="flex justify-end pt-1">
+                    <button
+                        type="button"
+                        id="main-test-next-btn"
+                        onclick="advanceMainTest()"
+                        disabled
+                        class="px-4 py-2.5 rounded-xl bg-sky-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 text-xs font-extrabold transition flex items-center gap-1.5"
+                    >
+                        <span>${appState.testCurrentIdx + 1 === total ? "Дүн харах" : "Дараагийн асуулт"}</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        function answerMainTest(selectedIdx, btnEl) {
+            if (appState.testAnswered) return;
+            appState.testAnswered = true;
+
+            const q = appState.testQuestions[appState.testCurrentIdx];
+            const buttons = document.querySelectorAll(".main-test-opt");
+            buttons.forEach(b => (b.disabled = true));
+
+            const feedback = document.getElementById("main-test-feedback");
+            const nextBtn = document.getElementById("main-test-next-btn");
+            if (nextBtn) nextBtn.disabled = false;
+
+            if (feedback) feedback.classList.remove("hidden");
+
+            if (selectedIdx === q.correctIndex) {
+                appState.testScore += 1;
+                const scoreEl = document.getElementById("main-test-score");
+                if (scoreEl) scoreEl.textContent = String(appState.testScore);
+
+                if (btnEl) {
+                    btnEl.className = "main-test-opt text-left p-3.5 rounded-xl bg-emerald-500/20 border-2 border-emerald-400 text-xs sm:text-sm font-bold text-emerald-300";
+                }
+                if (feedback) {
+                    feedback.className = "p-3.5 rounded-xl text-xs sm:text-sm font-medium bg-emerald-500/15 border border-emerald-500/35 text-emerald-300";
+                    feedback.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> Зөв! ${q.explanation}`;
+                }
+            } else {
+                if (btnEl) {
+                    btnEl.className = "main-test-opt text-left p-3.5 rounded-xl bg-rose-500/20 border-2 border-rose-400 text-xs sm:text-sm font-bold text-rose-300";
+                }
+                if (buttons[q.correctIndex]) {
+                    buttons[q.correctIndex].className = "main-test-opt text-left p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-400/60 text-xs sm:text-sm font-bold text-emerald-300";
+                }
+                if (feedback) {
+                    feedback.className = "p-3.5 rounded-xl text-xs sm:text-sm font-medium bg-rose-500/15 border border-rose-500/35 text-rose-200";
+                    feedback.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1.5"></i> Буруу байна. ${q.explanation}`;
+                }
+            }
+        }
+
+        function advanceMainTest() {
+            if (!appState.testAnswered) return;
+            appState.testCurrentIdx += 1;
+            renderMainTest();
+        }
+
+        /**
+         * Filtering, search, periodic grid rendering, and element inspector logic
+         * for all 118 chemical elements.
+         */
+        function isElementMatching(el) {
+            if (appState.category !== "all" && el.category !== appState.category) {
+                return false;
+            }
+            const q = (appState.search || "").trim().toLowerCase();
+            if (!q) return true;
+
+            return (
+                String(el.number) === q ||
+                el.symbol.toLowerCase().includes(q) ||
+                el.nameEn.toLowerCase().includes(q) ||
+                el.nameMn.toLowerCase().includes(q)
+            );
+        }
+
+        function handleSearchInput(val) {
+            appState.search = val || "";
+            const clearBtn = document.getElementById("clear-search-btn");
+            if (clearBtn) {
+                clearBtn.classList.toggle("hidden", !appState.search.trim());
+            }
+            renderPeriodicGrid();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById("element-search-input");
+            if (input) input.value = "";
+            handleSearchInput("");
+        }
+
+        function selectCategory(catKey) {
+            appState.category = catKey;
+            renderCategoryFilters();
+            renderPeriodicGrid();
+        }
+
+        function resetFilters() {
+            appState.category = "all";
+            appState.search = "";
+            const input = document.getElementById("element-search-input");
+            if (input) input.value = "";
+            const clearBtn = document.getElementById("clear-search-btn");
+            if (clearBtn) clearBtn.classList.add("hidden");
+            renderCategoryFilters();
+            renderPeriodicGrid();
+        }
+
+        function renderCategoryFilters() {
+            const bar = document.getElementById("category-filter-bar");
+            if (!bar) return;
+
+            const entries = [
+                { key: "all", label: "Бүх ангилал (118)" },
+                ...Object.entries(CATEGORY_META).map(([key, meta]) => ({
+                    key,
+                    label: meta.mn
+                }))
+            ];
+
+            bar.innerHTML = entries.map(item => {
+                const isActive = appState.category === item.key;
+                const cls = isActive
+                    ? "bg-sky-400 text-slate-950 font-extrabold border-sky-300 shadow"
+                    : "bg-slate-950/90 hover:bg-slate-800 text-slate-300 font-semibold border-slate-800";
+                return `
+                    <button
+                        type="button"
+                        onclick="selectCategory('${item.key}')"
+                        class="px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap border transition ${cls}"
+                    >
+                        ${item.label}
+                    </button>
+                `;
+            }).join("");
+
+            const summaryEl = document.getElementById("active-filter-summary");
+            if (summaryEl) {
+                summaryEl.textContent = appState.category === "all"
+                    ? "Бүх ангилал"
+                    : (CATEGORY_META[appState.category]?.mn || appState.category);
+            }
+        }
+
+        function createElementTileHtml(el, isMatch) {
+            const catMeta = CATEGORY_META[el.category] || {
+                tileClass: "bg-slate-800 border-slate-700 text-slate-100"
+            };
+            const isSelected = appState.selectedNumber === el.number;
+            const ringClass = isSelected
+                ? "ring-2 ring-white scale-[1.03] shadow-lg z-10"
+                : "";
+            const dimClass = isMatch
+                ? "opacity-100"
+                : "opacity-20 saturate-50";
+
+            return `
+                <button
+                    type="button"
+                    onclick="selectElement(${el.number})"
+                    title="#${el.number} ${el.nameMn} (${el.symbol})"
+                    class="element-tile aspect-square rounded-xl border p-1 sm:p-1.5 flex flex-col justify-between text-left ${catMeta.tileClass} ${ringClass} ${dimClass}"
+                >
+                    <div class="flex items-center justify-between gap-0.5 leading-none">
+                        <span class="font-mono text-[9px] sm:text-[10px] font-bold opacity-85">${el.number}</span>
+                        <span class="font-mono text-[8px] opacity-70 hidden sm:inline">${el.mass}</span>
+                    </div>
+                    <div class="font-mono text-xs sm:text-sm font-black text-center leading-none tracking-tight">
+                        ${el.symbol}
+                    </div>
+                    <div class="text-[8px] sm:text-[9px] font-semibold truncate text-center leading-tight opacity-90">
+                        ${el.nameMn}
+                    </div>
+                </button>
+            `;
+        }
+
+        function renderPeriodicGrid() {
+            const mainGrid = document.getElementById("periodic-main-grid");
+            const lanGrid = document.getElementById("lanthanide-grid");
+            const actGrid = document.getElementById("actinide-grid");
+            if (!mainGrid || !lanGrid || !actGrid) return;
+
+            let visibleCount = 0;
+            const matchMap = new Map();
+            ELEMENTS.forEach(el => {
+                const matched = isElementMatching(el);
+                matchMap.set(el.number, matched);
+                if (matched) visibleCount += 1;
+            });
+
+            const countEl = document.getElementById("visible-elements-count");
+            if (countEl) {
+                countEl.textContent = `${visibleCount} / ${ELEMENTS.length}`;
+            }
+
+            // Build 7 periods x 18 columns main grid
+            const cells = [];
+            for (let period = 1; period <= 7; period++) {
+                for (let col = 1; col <= 18; col++) {
+                    // Lanthanides (57..71) and Actinides (89..103) are placed in dedicated bottom rows
+                    const isLanSlot = period === 6 && col >= 3 && col <= 17;
+                    const isActSlot = period === 7 && col >= 3 && col <= 17;
+
+                    if (isLanSlot) {
+                        cells.push(`
+                            <div class="aspect-square rounded-xl border border-dashed border-amber-500/25 bg-amber-500/5 flex flex-col items-center justify-center text-[9px] font-mono text-amber-300/70">
+                                <span>57–71</span>
+                            </div>
+                        `);
+                        continue;
+                    }
+                    if (isActSlot) {
+                        cells.push(`
+                            <div class="aspect-square rounded-xl border border-dashed border-fuchsia-500/25 bg-fuchsia-500/5 flex flex-col items-center justify-center text-[9px] font-mono text-fuchsia-300/70">
+                                <span>89–103</span>
+                            </div>
+                        `);
+                        continue;
+                    }
+
+                    const found = ELEMENTS.find(
+                        e => e.period === period && e.col === col &&
+                            !((e.number >= 57 && e.number <= 71) || (e.number >= 89 && e.number <= 103))
+                    );
+
+                    if (found) {
+                        cells.push(createElementTileHtml(found, matchMap.get(found.number)));
+                    } else {
+                        cells.push(`<div class="aspect-square rounded-xl bg-transparent pointer-events-none"></div>`);
+                    }
+                }
+            }
+            mainGrid.innerHTML = cells.join("");
+
+            const lanthanides = ELEMENTS.filter(e => e.number >= 57 && e.number <= 71);
+            lanGrid.innerHTML = lanthanides
+                .map(el => createElementTileHtml(el, matchMap.get(el.number)))
+                .join("");
+
+            const actinides = ELEMENTS.filter(e => e.number >= 89 && e.number <= 103);
+            actGrid.innerHTML = actinides
+                .map(el => createElementTileHtml(el, matchMap.get(el.number)))
+                .join("");
+        }
+
+        function selectElement(num) {
+            appState.selectedNumber = Number(num);
+            renderPeriodicGrid();
+            renderInspector();
+        }
+
+        function renderInspector() {
+            const inspector = document.getElementById("element-inspector");
+            if (!inspector) return;
+
+            const el = ELEMENTS.find(item => item.number === appState.selectedNumber) || ELEMENTS[0];
+            const catMeta = CATEGORY_META[el.category] || {
+                mn: el.category,
+                badgeClass: "bg-slate-800 text-slate-300 border-slate-700"
+            };
+
+            inspector.innerHTML = `
+                <div class="flex items-start justify-between gap-3 border-b border-slate-800/90 pb-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-16 h-16 rounded-2xl bg-slate-950 border-2 border-sky-400/50 flex flex-col items-center justify-center shrink-0 shadow-lg">
+                            <span class="font-mono text-[10px] font-bold text-slate-400 leading-none">#${el.number}</span>
+                            <span class="font-mono text-2xl font-black text-white leading-tight">${el.symbol}</span>
+                        </div>
+                        <div>
+                            <span class="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${catMeta.badgeClass}">
+                                ${catMeta.mn}
+                            </span>
+                            <h3 class="text-xl sm:text-2xl font-black text-white mt-1">${el.nameMn}</h3>
+                            <p class="text-xs text-slate-400">${el.nameEn}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="p-3 rounded-2xl bg-slate-950/90 border border-slate-800">
+                        <div class="text-slate-400">Атом дугаар</div>
+                        <div class="font-mono text-base font-extrabold text-sky-400 mt-0.5">${el.number}</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-950/90 border border-slate-800">
+                        <div class="text-slate-400">Атом масс</div>
+                        <div class="font-mono text-base font-extrabold text-emerald-400 mt-0.5">${el.mass}</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-950/90 border border-slate-800">
+                        <div class="text-slate-400">Үе / Бүлэг</div>
+                        <div class="font-mono text-sm font-extrabold text-white mt-0.5">Үе ${el.period} • Багана ${el.col}</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-950/90 border border-slate-800">
+                        <div class="text-slate-400">Төлөв</div>
+                        <div class="text-sm font-extrabold text-amber-300 mt-0.5">${el.phase}</div>
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-1">
+                    <div class="text-xs text-slate-400">Электроны байгууламж</div>
+                    <div class="font-mono text-sm font-bold text-indigo-300">${el.eConfig}</div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Товч шинж чанар</div>
+                    <p class="text-xs sm:text-sm text-slate-200 leading-relaxed bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5">
+                        ${el.summary}
+                    </p>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Бодит хэрэглээ</div>
+                    <p class="text-xs sm:text-sm text-emerald-200/95 leading-relaxed bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5">
+                        ${el.uses}
+                    </p>
+                </div>
+            `;
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            loadMemorizedElements();
+            renderCategoryFilters();
+            renderPeriodicGrid();
+            renderInspector();
+            renderGradeLesson();
+            renderMemorizeCard();
+            restartMainTest();
+        });
+    </script>
+</body>
+</html>
